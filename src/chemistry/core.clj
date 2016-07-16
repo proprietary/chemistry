@@ -73,14 +73,8 @@
 
 (defn electron-count-assigned
   [e-count]
-  (let [how-many-combs (quot e-count 2)
-        remainder-e-count (mod e-count 2)
-        all-combs (sort-quantum-number-combinations (quantum-number-combinations e-count))
-        used-combs (take how-many-combs all-combs)
-        final-comb (nth all-combs (+ (dec how-many-combs)
-                                     remainder-e-count))
-        avail-combs1 (conj (vec used-combs)
-                           final-comb)
+  (let [all-combs (sort-quantum-number-combinations (quantum-number-combinations 7)) ;; TODO not 7!!
+        final-comb (nth all-combs (quot e-count 2))
         highest-n-l (select-keys final-comb [:n :l])
         before-final? (fn [x] (not (and (= (:l x)
                                            (:l highest-n-l))
@@ -89,7 +83,8 @@
         including-final? (fn [x] (let [{L :l N :n} x]
                                    (and (<= L (:l highest-n-l))
                                         (<= N (:n highest-n-l)))))
-        avail-combs (take-while including-final? all-combs)] ;; TODO quantum-number-combinations lazy inf seq
+        ;; avail-combs (take-while including-final? all-combs)
+        avail-combs (take (inc (quot e-count 2)) all-combs)] ;; TODO quantum-number-combinations lazy inf seq
     (-> (map #(assoc % :e 2)
              (take-while before-final? avail-combs)) ;; all the combs before the final ones
         vec
@@ -112,15 +107,26 @@
                                                (inc (get (nth ret ret-idx)
                                                          :e)))))))))))
 
-
 (defn text-configuration
-  "Textualizes a configuration of {:e electrons :n :l :m ...} to e.g. 2p^3"
+  "Textualizes a configuration of {:e electrons :n :l :m ...} to e.g. 2p^3. From electron-count-assigned result"
   [config]
-  )
+  ;; partition where N and L are the same
+  (->> (->> (group-by #(select-keys % [:n :l])
+                      config)
+            (sort #(lower-energy? (first %1)
+                                  (first %2))))
+       (map (fn [x] [(first x)
+                     (reduce (fn [a b] (+ a
+                                         (:e b)))
+                            0
+                            (last x))]))
+       (map (fn [x] (let [{N :n L :l} (first x)
+                          electrons (last x)]
+                      (apply str [N
+                                  (get +L-subshell+ L)
+                                  "^"
+                                  electrons]))))))
 
-(defn configuration-from-electron-count
-  [e-count]
-  )
 
 (defn -main
   "I don't do a whole lot ... yet."
